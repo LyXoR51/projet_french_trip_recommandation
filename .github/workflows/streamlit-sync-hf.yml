@@ -1,0 +1,47 @@
+name: Streamlit - Sync to Hugging Face
+
+on:
+  push:
+    paths:
+      - '02_Streamlit/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Git LFS
+        run: |
+          git lfs install
+          git lfs track "02_Streamlit/src/images/*.png"
+          git add .gitattributes
+          git commit -m "Track images with LFS" || echo "No changes to commit"
+
+      - name: Push to Hugging Face with LFS
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          mkdir tmp
+          cp -r 02_Streamlit/* tmp/
+          cd tmp
+
+          git init
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          # LFS setup dans tmp
+          git lfs install
+          git lfs track "src/images/*.png"
+          git add .gitattributes
+          git add src/images/*.png
+          git add .
+          git commit -m "Deploy to HF with LFS"
+
+          git branch -M main
+          git remote add hf "https://lyx51:${HF_TOKEN}@huggingface.co/spaces/lyx51/French-Trip-Recommandation-Streamlit"
+
+          # push LFS first
+          git lfs push hf main
+
+          git push hf main --force
